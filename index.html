@@ -429,59 +429,71 @@
         // MODO TEMPO REAL
         // ============================================
         async function enableRealtimeMode() {
-            showLoading();
-            currentMode = 'realtime';
-            
-            // Atualizar UI dos botões
-            document.getElementById('btnRealtime').classList.add('active');
-            document.getElementById('btn24h').classList.remove('active');
+    showLoading();
+    currentMode = 'realtime';
+    
+    // Atualizar UI dos botões
+    document.getElementById('btnRealtime').classList.add('active');
+    document.getElementById('btn24h').classList.remove('active');
 
-            // Limpar trajeto anterior
-            if (pathLayer) {
-                map.removeLayer(pathLayer);
-                pathLayer = null;
-            }
+    // Limpar trajeto anterior
+    if (pathLayer) {
+        map.removeLayer(pathLayer);
+        pathLayer = null;
+    }
 
-            // Buscar localizações atuais
-            try {
-                const { data, error } = await supabase
-                    .rpc('get_latest_vehicle_locations');
+    // Buscar localizações atuais - SEM RPC
+    try {
+        const { data: allData, error } = await supabase
+            .from('map_vehicle_locations')
+            .select('*')
+            .order('created_at', { ascending: false });
 
-                if (error) {
-                    console.error('Erro ao buscar localizações:', error);
-                    hideLoading();
-                    return;
-                }
-
-                if (data && data.length > 0) {
-                    data.forEach(loc => updateVehicleMarker(loc));
-                    updateVehicleCount(data.length);
-                } else {
-                    updateVehicleCount(0);
-                }
-            } catch (err) {
-                console.error('Erro:', err);
-            }
-
-            // Configurar listener de realtime
-            if (realtimeChannel) {
-                supabase.removeChannel(realtimeChannel);
-            }
-
-            realtimeChannel = supabase
-                .channel('vehicle-updates')
-                .on('postgres_changes', {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'map_vehicle_locations'
-                }, (payload) => {
-                    console.log('Nova localização:', payload.new);
-                    updateVehicleMarker(payload.new);
-                })
-                .subscribe();
-
+        if (error) {
+            console.error('Erro ao buscar localizações:', error);
             hideLoading();
+            return;
         }
+
+        // Filtrar apenas a última posição de cada veículo
+        const latestByVehicle = {};
+        if (allData && allData.length > 0) {
+            allData.forEach(loc => {
+                if (!latestByVehicle[loc.vehicle_id] || 
+                    new Date(loc.created_at) > new Date(latestByVehicle[loc.vehicle_id].created_at)) {
+                    latestByVehicle[loc.vehicle_id] = loc;
+                }
+            });
+            
+            const data = Object.values(latestByVehicle);
+            data.forEach(loc => updateVehicleMarker(loc));
+            updateVehicleCount(data.length);
+        } else {
+            updateVehicleCount(0);
+        }
+    } catch (err) {
+        console.error('Erro:', err);
+    }
+
+    // Configurar listener de realtime
+    if (realtimeChannel) {
+        supabase.removeChannel(realtimeChannel);
+    }
+
+    realtimeChannel = supabase
+        .channel('vehicle-updates')
+        .on('postgres_changes', {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'map_vehicle_locations'
+        }, (payload) => {
+            console.log('Nova localização:', payload.new);
+            updateVehicleMarker(payload.new);
+        })
+        .subscribe();
+
+    hideLoading();
+}
 
         function updateVehicleMarker(location) {
             const coords = extractCoordinates(location.location);
