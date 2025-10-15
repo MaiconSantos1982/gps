@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Rastreamento de Frota</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --ios-blue: #007AFF;
+            --ios-blue-hover: #0051D5;
+            --ios-gray: #8E8E93;
+            --ios-light-gray: #F2F2F7;
+            --ios-border: #E5E5EA;
+            --ios-bg: #FFFFFF;
+            --ios-text: #000000;
+            --ios-secondary-text: #6E6E73;
+            --ios-success: #34C759;
+            --ios-shadow: rgba(0, 0, 0, 0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--ios-light-gray);
+            color: var(--ios-text);
+            overflow: hidden;
+        }
+
+        /* Header estilo iOS */
+        .header {
+            background: var(--ios-bg);
+            border-bottom: 1px solid var(--ios-border);
+            padding: 16px 20px;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            position: relative;
+            z-index: 1000;
+        }
+
+        .header-title {
+            font-size: 22px;
+            font-weight: 600;
+            color: var(--ios-text);
+            margin: 0;
+            letter-spacing: -0.5px;
+        }
+
+        .header-subtitle {
+            font-size: 13px;
+            color: var(--ios-secondary-text);
+            margin: 4px 0 0 0;
+            font-weight: 400;
+        }
+
+        /* Botões estilo iOS */
+        .ios-button-group {
+            display: flex;
+            gap: 8px;
+            background: var(--ios-light-gray);
+            padding: 4px;
+            border-radius: 12px;
+            width: fit-content;
+        }
+
+        .ios-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 10px;
+            background: transparent;
+            color: var(--ios-text);
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .ios-btn:hover {
+            background: rgba(0, 122, 255, 0.1);
+        }
+
+        .ios-btn.active {
+            background: var(--ios-bg);
+            color: var(--ios-blue);
+            box-shadow: 0 2px 8px var(--ios-shadow);
+        }
+
+        /* Mapa */
+        #map {
+            height: calc(100vh - 88px);
+            width: 100%;
+            border: none;
+        }
+
+        /* Loading indicator */
+        .loading-indicator {
+            position: absolute;
+            top: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--ios-bg);
+            padding: 16px 24px;
+            border-radius: 16px;
+            box-shadow: 0 4px 16px var(--ios-shadow);
+            z-index: 999;
+            display: none;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .loading-indicator.show {
+            display: flex;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--ios-light-gray);
+            border-top-color: var(--ios-blue);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 15px;
+            color: var(--ios-text);
+            font-weight: 500;
+        }
+
+        /* Badge de status */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: rgba(52, 199, 89, 0.1);
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--ios-success);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--ios-success);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Popup customizado estilo iOS */
+        .leaflet-popup-content-wrapper {
+            background: var(--ios-bg);
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .leaflet-popup-content {
+            margin: 0;
+            padding: 16px;
+            font-family: 'Inter', sans-serif;
+            min-width: 200px;
+        }
+
+        .leaflet-popup-tip-container {
+            display: none;
+        }
+
+        .popup-header {
+            font-size: 17px;
+            font-weight: 600;
+            color: var(--ios-text);
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--ios-border);
+        }
+
+        .popup-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 14px;
+        }
+
+        .popup-label {
+            color: var(--ios-secondary-text);
+            font-weight: 400;
+        }
+
+        .popup-value {
+            color: var(--ios-text);
+            font-weight: 500;
+        }
+
+        /* Marcador customizado */
+        .vehicle-marker {
+            background: linear-gradient(135deg, var(--ios-blue) 0%, #0051D5 100%);
+            border: 3px solid var(--ios-bg);
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            box-shadow: 0 4px 12px rgba(0, 122, 255, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: markerPulse 2s infinite;
+        }
+
+        @keyframes markerPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .vehicle-marker::after {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+        }
+
+        /* Responsivo */
+        @media (max-width: 768px) {
+            .header {
+                padding: 12px 16px;
+            }
+
+            .header-title {
+                font-size: 20px;
+            }
+
+            .ios-btn {
+                padding: 8px 16px;
+                font-size: 14px;
+            }
+
+            #map {
+                height: calc(100vh - 140px);
+            }
+        }
+
+        /* Ícones personalizados para início/fim */
+        .start-marker, .end-marker {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .start-marker {
+            background: linear-gradient(135deg, #34C759 0%, #30D158 100%);
+        }
+
+        .end-marker {
+            background: linear-gradient(135deg, #FF3B30 0%, #FF453A 100%);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="header-title">🚗 Rastreamento de Frota</h1>
+                <p class="header-subtitle" id="vehicleCount">Carregando veículos...</p>
+            </div>
+            <div class="ios-button-group">
+                <button id="btnRealtime" class="ios-btn active">
+                    📍 Tempo Real
+                </button>
+                <button id="btn24h" class="ios-btn">
+                    🕐 24 Horas
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div class="loading-indicator" id="loadingIndicator">
+        <div class="spinner"></div>
+        <span class="loading-text">Atualizando localização...</span>
+    </div>
+
+    <!-- Mapa -->
+    <div id="map"></div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script>
+        // ============================================
+        // CONFIGURAÇÃO SUPABASE
+        // ============================================
+        const SUPABASE_URL = 'https://seu-projeto.supabase.co';
+        const SUPABASE_ANON_KEY = 'sua-anon-key-aqui';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // ============================================
+        // INICIALIZAR MAPA
+        // ============================================
+        const map = L.map('map', {
+            zoomControl: true,
+            attributionControl: false
+        }).setView([-30.0346, -51.2177], 12);
+
+        // Adicionar tiles do OpenStreetMap com estilo claro
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        // ============================================
+        // VARIÁVEIS GLOBAIS
+        // ============================================
+        let vehicleMarkers = {};
+        let pathLayer = null;
+        let realtimeChannel = null;
+        let currentMode = 'realtime';
+        let loadingTimeout = null;
+
+        // ============================================
+        // ÍCONES CUSTOMIZADOS
+        // ============================================
+        const vehicleIcon = L.divIcon({
+            className: 'vehicle-marker',
+            iconSize: [28, 28],
+            iconAnchor: [14, 14],
+            popupAnchor: [0, -14]
+        });
+
+        const startIcon = L.divIcon({
+            className: 'start-marker',
+            html: '🟢',
+            iconSize: [40, 40],
+            iconAnchor: [20, 40],
+            popupAnchor: [0, -40]
+        });
+
+        const endIcon = L.divIcon({
+            className: 'end-marker',
+            html: '🔴',
+            iconSize: [40, 40],
+            iconAnchor: [20, 40],
+            popupAnchor: [0, -40]
+        });
+
+        // ============================================
+        // FUNÇÕES AUXILIARES
+        // ============================================
+        function showLoading() {
+            document.getElementById('loadingIndicator').classList.add('show');
+        }
+
+        function hideLoading() {
+            if (loadingTimeout) clearTimeout(loadingTimeout);
+            loadingTimeout = setTimeout(() => {
+                document.getElementById('loadingIndicator').classList.remove('show');
+            }, 300);
+        }
+
+        function updateVehicleCount(count) {
+            const text = count === 1 ? '1 veículo ativo' : `${count} veículos ativos`;
+            document.getElementById('vehicleCount').textContent = text;
+        }
+
+        function extractCoordinates(geojson) {
+            if (typeof geojson === 'string') {
+                geojson = JSON.parse(geojson);
+            }
+            return {
+                lng: geojson.coordinates[0],
+                lat: geojson.coordinates[1]
+            };
+        }
+
+        function formatTimestamp(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diff = Math.floor((now - date) / 1000); // segundos
+
+            if (diff < 60) return 'agora há pouco';
+            if (diff < 3600) return `há ${Math.floor(diff / 60)} min`;
+            if (diff < 86400) return `há ${Math.floor(diff / 3600)} h`;
+            
+            return date.toLocaleString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // ============================================
+        // MODO TEMPO REAL
+        // ============================================
+        async function enableRealtimeMode() {
+            showLoading();
+            currentMode = 'realtime';
+            
+            // Atualizar UI dos botões
+            document.getElementById('btnRealtime').classList.add('active');
+            document.getElementById('btn24h').classList.remove('active');
+
+            // Limpar trajeto anterior
+            if (pathLayer) {
+                map.removeLayer(pathLayer);
+                pathLayer = null;
+            }
+
+            // Buscar localizações atuais
+            try {
+                const { data, error } = await supabase
+                    .rpc('get_latest_vehicle_locations');
+
+                if (error) {
+                    console.error('Erro ao buscar localizações:', error);
+                    hideLoading();
+                    return;
+                }
+
+                if (data && data.length > 0) {
+                    data.forEach(loc => updateVehicleMarker(loc));
+                    updateVehicleCount(data.length);
+                } else {
+                    updateVehicleCount(0);
+                }
+            } catch (err) {
+                console.error('Erro:', err);
+            }
+
+            // Configurar listener de realtime
+            if (realtimeChannel) {
+                supabase.removeChannel(realtimeChannel);
+            }
+
+            realtimeChannel = supabase
+                .channel('vehicle-updates')
+                .on('postgres_changes', {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'map_vehicle_locations'
+                }, (payload) => {
+                    console.log('Nova localização:', payload.new);
+                    updateVehicleMarker(payload.new);
+                })
+                .subscribe();
+
+            hideLoading();
+        }
+
+        function updateVehicleMarker(location) {
+            const coords = extractCoordinates(location.location);
+            const latlng = [coords.lat, coords.lng];
+
+            if (vehicleMarkers[location.vehicle_id]) {
+                // Atualizar posição existente
+                vehicleMarkers[location.vehicle_id].setLatLng(latlng);
+                vehicleMarkers[location.vehicle_id].setPopupContent(createPopupContent(location));
+            } else {
+                // Criar novo marker
+                const marker = L.marker(latlng, { icon: vehicleIcon }).addTo(map);
+                marker.bindPopup(createPopupContent(location), {
+                    maxWidth: 300,
+                    className: 'ios-popup'
+                });
+                vehicleMarkers[location.vehicle_id] = marker;
+            }
+
+            // Centralizar no primeiro veículo
+            if (Object.keys(vehicleMarkers).length === 1) {
+                map.setView(latlng, 14);
+            }
+        }
+
+        function createPopupContent(location) {
+            const speed = location.speed ? `${location.speed.toFixed(1)} km/h` : 'Parado';
+            const accuracy = location.accuracy ? `${location.accuracy.toFixed(0)}m` : 'N/A';
+            const time = formatTimestamp(location.created_at);
+
+            return `
+                <div class="popup-header">${location.driver_name}</div>
+                <div class="popup-row">
+                    <span class="popup-label">Veículo</span>
+                    <span class="popup-value">${location.vehicle_id}</span>
+                </div>
+                <div class="popup-row">
+                    <span class="popup-label">Velocidade</span>
+                    <span class="popup-value">${speed}</span>
+                </div>
+                <div class="popup-row">
+                    <span class="popup-label">Precisão</span>
+                    <span class="popup-value">${accuracy}</span>
+                </div>
+                <div class="popup-row">
+                    <span class="popup-label">Atualizado</span>
+                    <span class="popup-value">${time}</span>
+                </div>
+            `;
+        }
+
+        // ============================================
+        // MODO 24 HORAS
+        // ============================================
+        async function enable24hMode() {
+            showLoading();
+            currentMode = '24h';
+
+            // Atualizar UI dos botões
+            document.getElementById('btn24h').classList.add('active');
+            document.getElementById('btnRealtime').classList.remove('active');
+
+            // Desabilitar realtime
+            if (realtimeChannel) {
+                supabase.removeChannel(realtimeChannel);
+                realtimeChannel = null;
+            }
+
+            // Limpar markers de tempo real
+            Object.values(vehicleMarkers).forEach(marker => map.removeLayer(marker));
+            vehicleMarkers = {};
+
+            // Buscar primeiro veículo disponível
+            const { data: vehicles } = await supabase
+                .from('map_vehicle_locations')
+                .select('vehicle_id')
+                .order('created_at', { ascending: false })
+                .limit(1);
+
+            if (!vehicles || vehicles.length === 0) {
+                alert('Nenhum veículo encontrado');
+                hideLoading();
+                return;
+            }
+
+            const vehicleId = vehicles[0].vehicle_id;
+
+            // Buscar trajeto das últimas 24h
+            const { data, error } = await supabase
+                .rpc('get_vehicle_path_24h', { p_vehicle_id: vehicleId });
+
+            if (error) {
+                console.error('Erro ao buscar trajeto:', error);
+                alert('Erro ao carregar trajeto');
+                hideLoading();
+                return;
+            }
+
+            if (data && data.length > 0) {
+                // Criar array de coordenadas
+                const coordinates = data.map(point => [point.latitude, point.longitude]);
+
+                // Desenhar linha do trajeto
+                if (pathLayer) {
+                    map.removeLayer(pathLayer);
+                }
+
+                pathLayer = L.polyline(coordinates, {
+                    color: '#007AFF',
+                    weight: 4,
+                    opacity: 0.8,
+                    smoothFactor: 1
+                }).addTo(map);
+
+                // Adicionar markers de início e fim
+                L.marker(coordinates[0], { icon: startIcon })
+                    .bindPopup(`
+                        <div class="popup-header">Início do Trajeto</div>
+                        <div class="popup-row">
+                            <span class="popup-label">Horário</span>
+                            <span class="popup-value">${new Date(data[0].created_at).toLocaleString('pt-BR')}</span>
+                        </div>
+                    `)
+                    .addTo(map);
+
+                L.marker(coordinates[coordinates.length - 1], { icon: endIcon })
+                    .bindPopup(`
+                        <div class="popup-header">Fim do Trajeto</div>
+                        <div class="popup-row">
+                            <span class="popup-label">Horário</span>
+                            <span class="popup-value">${new Date(data[data.length - 1].created_at).toLocaleString('pt-BR')}</span>
+                        </div>
+                    `)
+                    .addTo(map);
+
+                // Ajustar zoom para mostrar todo o trajeto
+                map.fitBounds(pathLayer.getBounds(), { padding: [50, 50] });
+                
+                updateVehicleCount(1);
+            } else {
+                alert('Nenhum trajeto encontrado nas últimas 24 horas');
+                updateVehicleCount(0);
+            }
+
+            hideLoading();
+        }
+
+        // ============================================
+        // EVENT LISTENERS
+        // ============================================
+        document.getElementById('btnRealtime').addEventListener('click', enableRealtimeMode);
+        document.getElementById('btn24h').addEventListener('click', enable24hMode);
+
+        // ============================================
+        // INICIALIZAÇÃO
+        // ============================================
+        enableRealtimeMode();
+    </script>
+</body>
+</html>
