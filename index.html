@@ -459,9 +459,17 @@
     // Buscar localizações atuais - SEM RPC
     try {
         const { data: allData, error } = await supabase
-            .from('map_vehicle_locations')
-            .select('*')
-            .order('created_at', { ascending: false });
+    .from('map_vehicle_locations')
+    .select(`
+        id,
+        vehicle_id,
+        driver_name,
+        speed,
+        accuracy,
+        created_at,
+        location
+    `)
+    .order('created_at', { ascending: false });
 
         if (error) {
             console.error('Erro ao buscar localizações:', error);
