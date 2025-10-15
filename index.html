@@ -45,7 +45,6 @@
             overflow: hidden;
         }
 
-        /* Header estilo iOS */
         .header {
             background: var(--ios-bg);
             border-bottom: 1px solid var(--ios-border);
@@ -71,7 +70,6 @@
             font-weight: 400;
         }
 
-        /* Botões estilo iOS */
         .ios-button-group {
             display: flex;
             gap: 8px;
@@ -104,14 +102,12 @@
             box-shadow: 0 2px 8px var(--ios-shadow);
         }
 
-        /* Mapa */
         #map {
             height: calc(100vh - 88px);
             width: 100%;
             border: none;
         }
 
-        /* Loading indicator */
         .loading-indicator {
             position: absolute;
             top: 100px;
@@ -150,33 +146,6 @@
             font-weight: 500;
         }
 
-        /* Badge de status */
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 12px;
-            background: rgba(52, 199, 89, 0.1);
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 500;
-            color: var(--ios-success);
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            background: var(--ios-success);
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        /* Popup customizado estilo iOS */
         .leaflet-popup-content-wrapper {
             background: var(--ios-bg);
             border-radius: 16px;
@@ -222,7 +191,6 @@
             font-weight: 500;
         }
 
-        /* Marcador customizado */
         .vehicle-marker {
             background: linear-gradient(135deg, var(--ios-blue) 0%, #0051D5 100%);
             border: 3px solid var(--ios-bg);
@@ -249,7 +217,6 @@
             border-radius: 50%;
         }
 
-        /* Responsivo */
         @media (max-width: 768px) {
             .header {
                 padding: 12px 16px;
@@ -269,7 +236,6 @@
             }
         }
 
-        /* Ícones personalizados para início/fim */
         .start-marker, .end-marker {
             width: 40px;
             height: 40px;
@@ -291,7 +257,6 @@
     </style>
 </head>
 <body>
-    <!-- Header -->
     <div class="header">
         <div class="d-flex justify-content-between align-items-center">
             <div>
@@ -309,53 +274,37 @@
         </div>
     </div>
 
-    <!-- Loading Indicator -->
     <div class="loading-indicator" id="loadingIndicator">
         <div class="spinner"></div>
         <span class="loading-text">Atualizando localização...</span>
     </div>
 
-    <!-- Mapa -->
     <div id="map"></div>
 
-    <!-- Scripts -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <script>
-        // ============================================
-        // CONFIGURAÇÃO SUPABASE
-        // ============================================
         const SUPABASE_URL = 'https://ztlddoutgextdmyiwoxl.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp0bGRkb3V0Z2V4dGRteWl3b3hsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzM5MTAyNTksImV4cCI6MjA0OTQ4NjI1OX0.l9qwcAL4h9Ho_IU9uNhm2wyBHaYgNbor98a17-43EpI';
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // ============================================
-        // INICIALIZAR MAPA
-        // ============================================
         const map = L.map('map', {
             zoomControl: true,
             attributionControl: false
         }).setView([-30.0346, -51.2177], 12);
 
-        // Adicionar tiles do OpenStreetMap com estilo claro
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '© OpenStreetMap'
         }).addTo(map);
 
-        // ============================================
-        // VARIÁVEIS GLOBAIS
-        // ============================================
         let vehicleMarkers = {};
         let pathLayer = null;
         let realtimeChannel = null;
         let currentMode = 'realtime';
         let loadingTimeout = null;
 
-        // ============================================
-        // ÍCONES CUSTOMIZADOS
-        // ============================================
         const vehicleIcon = L.divIcon({
             className: 'vehicle-marker',
             iconSize: [28, 28],
@@ -379,9 +328,6 @@
             popupAnchor: [0, -40]
         });
 
-        // ============================================
-        // FUNÇÕES AUXILIARES
-        // ============================================
         function showLoading() {
             document.getElementById('loadingIndicator').classList.add('show');
         }
@@ -398,34 +344,10 @@
             document.getElementById('vehicleCount').textContent = text;
         }
 
-       function extractCoordinates(geojson) {
-    // Se vier como string hex (PostGIS raw), converter
-    if (typeof geojson === 'string' && geojson.startsWith('0101')) {
-        // Não conseguimos parsear hex diretamente, usar ST_AsGeoJSON
-        console.warn('Formato hex detectado, usando fallback');
-        return null;
-    }
-    
-    // Se vier como GeoJSON válido
-    if (typeof geojson === 'string') {
-        geojson = JSON.parse(geojson);
-    }
-    
-    // GeoJSON format
-    if (geojson && geojson.coordinates) {
-        return {
-            lng: geojson.coordinates[0],
-            lat: geojson.coordinates[1]
-        };
-    }
-    
-    return null;
-}
-
         function formatTimestamp(timestamp) {
             const date = new Date(timestamp);
             const now = new Date();
-            const diff = Math.floor((now - date) / 1000); // segundos
+            const diff = Math.floor((now - date) / 1000);
 
             if (diff < 60) return 'agora há pouco';
             if (diff < 3600) return `há ${Math.floor(diff / 60)} min`;
@@ -439,115 +361,122 @@
             });
         }
 
-        // ============================================
-        // MODO TEMPO REAL
-        // ============================================
-        async function enableRealtimeMode() {
-    showLoading();
-    currentMode = 'realtime';
-    
-    // Atualizar UI dos botões
-    document.getElementById('btnRealtime').classList.add('active');
-    document.getElementById('btn24h').classList.remove('active');
-
-    // Limpar trajeto anterior
-    if (pathLayer) {
-        map.removeLayer(pathLayer);
-        pathLayer = null;
-    }
-
-    // Buscar localizações atuais - SEM RPC
-    try {
-        const { data: allData, error } = await supabase
-    .from('map_vehicle_locations')
-    .select(`
-        id,
-        vehicle_id,
-        driver_name,
-        speed,
-        accuracy,
-        created_at,
-        location
-    `)
-    .order('created_at', { ascending: false });
-
-        if (error) {
-            console.error('Erro ao buscar localizações:', error);
-            hideLoading();
-            return;
-        }
-
-        // Filtrar apenas a última posição de cada veículo
-        const latestByVehicle = {};
-        if (allData && allData.length > 0) {
-            allData.forEach(loc => {
-                if (!latestByVehicle[loc.vehicle_id] || 
-                    new Date(loc.created_at) > new Date(latestByVehicle[loc.vehicle_id].created_at)) {
-                    latestByVehicle[loc.vehicle_id] = loc;
-                }
-            });
+        // FUNÇÃO PRINCIPAL: Buscar coordenadas do Supabase com conversão
+        async function getLocationCoordinates(locationId) {
+            const { data, error } = await supabase
+                .rpc('st_astext_location', { location_id: locationId });
             
-            const data = Object.values(latestByVehicle);
-            data.forEach(loc => updateVehicleMarker(loc));
-            updateVehicleCount(data.length);
-        } else {
-            updateVehicleCount(0);
-        }
-    } catch (err) {
-        console.error('Erro:', err);
-    }
-
-    // Configurar listener de realtime
-    if (realtimeChannel) {
-        supabase.removeChannel(realtimeChannel);
-    }
-
-    realtimeChannel = supabase
-        .channel('vehicle-updates')
-        .on('postgres_changes', {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'map_vehicle_locations'
-        }, (payload) => {
-            console.log('Nova localização:', payload.new);
-            updateVehicleMarker(payload.new);
-        })
-        .subscribe();
-
-    hideLoading();
-}
-
-        function updateVehicleMarker(location) {
-    // Extrair coordenadas usando RPC SQL
-    extractCoordinatesFromDB(location);
-}
-
-async function extractCoordinatesFromDB(location) {
-    // Buscar coordenadas via query SQL
-    const { data } = await supabase
-        .rpc('get_coordinates', { location_id: location.id });
-    
-    if (data && data.length > 0) {
-        const coords = data[0];
-        const latlng = [coords.lat, coords.lng];
-        
-        if (vehicleMarkers[location.vehicle_id]) {
-            vehicleMarkers[location.vehicle_id].setLatLng(latlng);
-            vehicleMarkers[location.vehicle_id].setPopupContent(createPopupContent(location));
-        } else {
-            const marker = L.marker(latlng, { icon: vehicleIcon }).addTo(map);
-            marker.bindPopup(createPopupContent(location), {
-                maxWidth: 300,
-                className: 'ios-popup'
-            });
-            vehicleMarkers[location.vehicle_id] = marker;
+            if (error || !data || data.length === 0) {
+                console.error('Erro ao buscar coordenadas:', error);
+                return null;
+            }
+            
+            // Parsear resultado "POINT(lng lat)"
+            const pointStr = data[0].st_astext;
+            const match = pointStr.match(/POINT\(([-\d.]+)\s+([-\d.]+)\)/);
+            
+            if (match) {
+                return {
+                    lng: parseFloat(match[1]),
+                    lat: parseFloat(match[2])
+                };
+            }
+            
+            return null;
         }
 
-        if (Object.keys(vehicleMarkers).length === 1) {
-            map.setView(latlng, 14);
+        async function enableRealtimeMode() {
+            showLoading();
+            currentMode = 'realtime';
+            
+            document.getElementById('btnRealtime').classList.add('active');
+            document.getElementById('btn24h').classList.remove('active');
+
+            if (pathLayer) {
+                map.removeLayer(pathLayer);
+                pathLayer = null;
+            }
+
+            try {
+                const { data: allData, error } = await supabase
+                    .from('map_vehicle_locations')
+                    .select('id, vehicle_id, driver_name, speed, accuracy, created_at')
+                    .order('created_at', { ascending: false });
+
+                if (error) {
+                    console.error('Erro ao buscar localizações:', error);
+                    hideLoading();
+                    return;
+                }
+
+                const latestByVehicle = {};
+                if (allData && allData.length > 0) {
+                    allData.forEach(loc => {
+                        if (!latestByVehicle[loc.vehicle_id] || 
+                            new Date(loc.created_at) > new Date(latestByVehicle[loc.vehicle_id].created_at)) {
+                            latestByVehicle[loc.vehicle_id] = loc;
+                        }
+                    });
+                    
+                    const data = Object.values(latestByVehicle);
+                    
+                    for (const loc of data) {
+                        await updateVehicleMarker(loc);
+                    }
+                    
+                    updateVehicleCount(data.length);
+                } else {
+                    updateVehicleCount(0);
+                }
+            } catch (err) {
+                console.error('Erro:', err);
+            }
+
+            if (realtimeChannel) {
+                supabase.removeChannel(realtimeChannel);
+            }
+
+            realtimeChannel = supabase
+                .channel('vehicle-updates')
+                .on('postgres_changes', {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'map_vehicle_locations'
+                }, (payload) => {
+                    console.log('Nova localização:', payload.new);
+                    updateVehicleMarker(payload.new);
+                })
+                .subscribe();
+
+            hideLoading();
         }
-    }
-}
+
+        async function updateVehicleMarker(location) {
+            const coords = await getLocationCoordinates(location.id);
+            
+            if (!coords) {
+                console.warn('Não foi possível obter coordenadas para:', location.vehicle_id);
+                return;
+            }
+            
+            const latlng = [coords.lat, coords.lng];
+            
+            if (vehicleMarkers[location.vehicle_id]) {
+                vehicleMarkers[location.vehicle_id].setLatLng(latlng);
+                vehicleMarkers[location.vehicle_id].setPopupContent(createPopupContent(location));
+            } else {
+                const marker = L.marker(latlng, { icon: vehicleIcon }).addTo(map);
+                marker.bindPopup(createPopupContent(location), {
+                    maxWidth: 300,
+                    className: 'ios-popup'
+                });
+                vehicleMarkers[location.vehicle_id] = marker;
+            }
+
+            if (Object.keys(vehicleMarkers).length === 1) {
+                map.setView(latlng, 14);
+            }
+        }
 
         function createPopupContent(location) {
             const speed = location.speed ? `${location.speed.toFixed(1)} km/h` : 'Parado';
@@ -575,28 +504,21 @@ async function extractCoordinatesFromDB(location) {
             `;
         }
 
-        // ============================================
-        // MODO 24 HORAS
-        // ============================================
         async function enable24hMode() {
             showLoading();
             currentMode = '24h';
 
-            // Atualizar UI dos botões
             document.getElementById('btn24h').classList.add('active');
             document.getElementById('btnRealtime').classList.remove('active');
 
-            // Desabilitar realtime
             if (realtimeChannel) {
                 supabase.removeChannel(realtimeChannel);
                 realtimeChannel = null;
             }
 
-            // Limpar markers de tempo real
             Object.values(vehicleMarkers).forEach(marker => map.removeLayer(marker));
             vehicleMarkers = {};
 
-            // Buscar primeiro veículo disponível
             const { data: vehicles } = await supabase
                 .from('map_vehicle_locations')
                 .select('vehicle_id')
@@ -611,22 +533,19 @@ async function extractCoordinatesFromDB(location) {
 
             const vehicleId = vehicles[0].vehicle_id;
 
-            // Buscar trajeto das últimas 24h
             const { data, error } = await supabase
                 .rpc('get_vehicle_path_24h', { p_vehicle_id: vehicleId });
 
             if (error) {
                 console.error('Erro ao buscar trajeto:', error);
-                alert('Erro ao carregar trajeto');
+                alert('Erro ao carregar trajeto: ' + error.message);
                 hideLoading();
                 return;
             }
 
             if (data && data.length > 0) {
-                // Criar array de coordenadas
                 const coordinates = data.map(point => [point.latitude, point.longitude]);
 
-                // Desenhar linha do trajeto
                 if (pathLayer) {
                     map.removeLayer(pathLayer);
                 }
@@ -638,7 +557,6 @@ async function extractCoordinatesFromDB(location) {
                     smoothFactor: 1
                 }).addTo(map);
 
-                // Adicionar markers de início e fim
                 L.marker(coordinates[0], { icon: startIcon })
                     .bindPopup(`
                         <div class="popup-header">Início do Trajeto</div>
@@ -659,7 +577,6 @@ async function extractCoordinatesFromDB(location) {
                     `)
                     .addTo(map);
 
-                // Ajustar zoom para mostrar todo o trajeto
                 map.fitBounds(pathLayer.getBounds(), { padding: [50, 50] });
                 
                 updateVehicleCount(1);
@@ -671,15 +588,9 @@ async function extractCoordinatesFromDB(location) {
             hideLoading();
         }
 
-        // ============================================
-        // EVENT LISTENERS
-        // ============================================
         document.getElementById('btnRealtime').addEventListener('click', enableRealtimeMode);
         document.getElementById('btn24h').addEventListener('click', enable24hMode);
 
-        // ============================================
-        // INICIALIZAÇÃO
-        // ============================================
         enableRealtimeMode();
     </script>
 </body>
