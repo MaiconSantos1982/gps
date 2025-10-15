@@ -398,15 +398,29 @@
             document.getElementById('vehicleCount').textContent = text;
         }
 
-        function extractCoordinates(geojson) {
-            if (typeof geojson === 'string') {
-                geojson = JSON.parse(geojson);
-            }
-            return {
-                lng: geojson.coordinates[0],
-                lat: geojson.coordinates[1]
-            };
-        }
+       function extractCoordinates(geojson) {
+    // Se vier como string hex (PostGIS raw), converter
+    if (typeof geojson === 'string' && geojson.startsWith('0101')) {
+        // Não conseguimos parsear hex diretamente, usar ST_AsGeoJSON
+        console.warn('Formato hex detectado, usando fallback');
+        return null;
+    }
+    
+    // Se vier como GeoJSON válido
+    if (typeof geojson === 'string') {
+        geojson = JSON.parse(geojson);
+    }
+    
+    // GeoJSON format
+    if (geojson && geojson.coordinates) {
+        return {
+            lng: geojson.coordinates[0],
+            lat: geojson.coordinates[1]
+        };
+    }
+    
+    return null;
+}
 
         function formatTimestamp(timestamp) {
             const date = new Date(timestamp);
@@ -496,28 +510,36 @@
 }
 
         function updateVehicleMarker(location) {
-            const coords = extractCoordinates(location.location);
-            const latlng = [coords.lat, coords.lng];
+    // Extrair coordenadas usando RPC SQL
+    extractCoordinatesFromDB(location);
+}
 
-            if (vehicleMarkers[location.vehicle_id]) {
-                // Atualizar posição existente
-                vehicleMarkers[location.vehicle_id].setLatLng(latlng);
-                vehicleMarkers[location.vehicle_id].setPopupContent(createPopupContent(location));
-            } else {
-                // Criar novo marker
-                const marker = L.marker(latlng, { icon: vehicleIcon }).addTo(map);
-                marker.bindPopup(createPopupContent(location), {
-                    maxWidth: 300,
-                    className: 'ios-popup'
-                });
-                vehicleMarkers[location.vehicle_id] = marker;
-            }
-
-            // Centralizar no primeiro veículo
-            if (Object.keys(vehicleMarkers).length === 1) {
-                map.setView(latlng, 14);
-            }
+async function extractCoordinatesFromDB(location) {
+    // Buscar coordenadas via query SQL
+    const { data } = await supabase
+        .rpc('get_coordinates', { location_id: location.id });
+    
+    if (data && data.length > 0) {
+        const coords = data[0];
+        const latlng = [coords.lat, coords.lng];
+        
+        if (vehicleMarkers[location.vehicle_id]) {
+            vehicleMarkers[location.vehicle_id].setLatLng(latlng);
+            vehicleMarkers[location.vehicle_id].setPopupContent(createPopupContent(location));
+        } else {
+            const marker = L.marker(latlng, { icon: vehicleIcon }).addTo(map);
+            marker.bindPopup(createPopupContent(location), {
+                maxWidth: 300,
+                className: 'ios-popup'
+            });
+            vehicleMarkers[location.vehicle_id] = marker;
         }
+
+        if (Object.keys(vehicleMarkers).length === 1) {
+            map.setView(latlng, 14);
+        }
+    }
+}
 
         function createPopupContent(location) {
             const speed = location.speed ? `${location.speed.toFixed(1)} km/h` : 'Parado';
