@@ -138,6 +138,141 @@
             padding: 8px 0;
             font-size: 14px;
         }
+
+        /* Modal de Seleção de Veículo */
+        .vehicle-selector-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.2s;
+        }
+
+        .vehicle-selector-overlay.show {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .vehicle-selector {
+            background: var(--ios-bg);
+            border-radius: 20px;
+            width: 90%;
+            max-width: 400px;
+            max-height: 80vh;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.3s;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .vehicle-selector-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--ios-border);
+            text-align: center;
+        }
+
+        .vehicle-selector-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .vehicle-selector-subtitle {
+            font-size: 14px;
+            color: var(--ios-secondary-text);
+        }
+
+        .vehicle-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .vehicle-item {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--ios-border);
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .vehicle-item:hover {
+            background: var(--ios-light-gray);
+        }
+
+        .vehicle-item:active {
+            background: #E5E5EA;
+        }
+
+        .vehicle-item:last-child {
+            border-bottom: none;
+        }
+
+        .vehicle-info {
+            flex: 1;
+        }
+
+        .vehicle-id {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--ios-text);
+        }
+
+        .vehicle-driver {
+            font-size: 14px;
+            color: var(--ios-secondary-text);
+            margin-top: 2px;
+        }
+
+        .vehicle-arrow {
+            color: var(--ios-gray);
+            font-size: 18px;
+        }
+
+        .vehicle-selector-footer {
+            padding: 12px;
+            border-top: 1px solid var(--ios-border);
+        }
+
+        .btn-cancel {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            background: var(--ios-light-gray);
+            color: var(--ios-blue);
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-cancel:hover {
+            background: #E5E5EA;
+        }
+
+        @media (max-width: 768px) {
+            .header { padding: 12px 16px; }
+            .header-title { font-size: 20px; }
+            .ios-btn { padding: 8px 16px; font-size: 14px; }
+            #map { height: calc(100vh - 140px); }
+        }
     </style>
 </head>
 <body>
@@ -157,6 +292,22 @@
     <div class="loading-indicator" id="loadingIndicator">
         <div class="spinner"></div>
         <span>Atualizando...</span>
+    </div>
+
+    <!-- Modal de Seleção de Veículo -->
+    <div class="vehicle-selector-overlay" id="vehicleSelectorOverlay">
+        <div class="vehicle-selector">
+            <div class="vehicle-selector-header">
+                <div class="vehicle-selector-title">Selecione o Veículo</div>
+                <div class="vehicle-selector-subtitle">Escolha qual veículo deseja visualizar</div>
+            </div>
+            <div class="vehicle-list" id="vehicleList">
+                <!-- Veículos serão inseridos aqui via JavaScript -->
+            </div>
+            <div class="vehicle-selector-footer">
+                <button class="btn-cancel" id="btnCancelSelector">Cancelar</button>
+            </div>
+        </div>
     </div>
 
     <div id="map"></div>
@@ -191,7 +342,6 @@
                 count === 1 ? '1 veículo ativo' : `${count} veículos ativos`;
         }
 
-        // USAR RPC SIMPLES
         async function enableRealtimeMode() {
             showLoading();
             document.getElementById('btnRealtime').classList.add('active');
@@ -203,32 +353,22 @@
             }
 
             try {
-                console.log('🔍 Buscando veículos...');
-                
                 const { data, error } = await supabase.rpc('get_latest_locations');
-
-                console.log('📦 Resposta Supabase:', { data, error });
 
                 if (error) {
                     console.error('❌ Erro:', error);
-                    alert('Erro ao buscar veículos: ' + error.message);
                     hideLoading();
                     return;
                 }
 
                 if (data && data.length > 0) {
-                    console.log('✅ Veículos encontrados:', data.length);
-                    data.forEach(loc => {
-                        console.log('Veículo:', loc);
-                        updateVehicleMarker(loc);
-                    });
+                    data.forEach(loc => updateVehicleMarker(loc));
                     updateVehicleCount(data.length);
                 } else {
-                    console.warn('⚠️ Nenhum veículo encontrado');
                     updateVehicleCount(0);
                 }
             } catch (err) {
-                console.error('💥 Erro fatal:', err);
+                console.error('💥 Erro:', err);
             }
 
             if (realtimeChannel) supabase.removeChannel(realtimeChannel);
@@ -239,7 +379,6 @@
                     schema: 'public',
                     table: 'map_vehicle_locations'
                 }, async (payload) => {
-                    console.log('🆕 Nova localização:', payload.new);
                     const { data } = await supabase.rpc('get_location_coords', { loc_id: payload.new.id });
                     if (data && data[0]) {
                         updateVehicleMarker({ ...payload.new, ...data[0] });
@@ -251,10 +390,7 @@
         }
 
         function updateVehicleMarker(loc) {
-            if (!loc.lat || !loc.lng) {
-                console.warn('❌ Sem coordenadas:', loc);
-                return;
-            }
+            if (!loc.lat || !loc.lng) return;
 
             const latlng = [loc.lat, loc.lng];
             
@@ -281,130 +417,135 @@
             }
         }
 
-    async function enable24hMode() {
-    showLoading();
-    document.getElementById('btn24h').classList.add('active');
-    document.getElementById('btnRealtime').classList.remove('active');
+        // FUNÇÃO PARA ABRIR SELETOR DE VEÍCULOS
+        async function showVehicleSelector() {
+            showLoading();
 
-    if (realtimeChannel) {
-        supabase.removeChannel(realtimeChannel);
-        realtimeChannel = null;
-    }
+            try {
+                const { data: vehicles, error } = await supabase.rpc('get_latest_locations');
 
-    Object.values(vehicleMarkers).forEach(m => map.removeLayer(m));
-    vehicleMarkers = {};
+                if (error || !vehicles || vehicles.length === 0) {
+                    alert('Nenhum veículo disponível');
+                    hideLoading();
+                    return;
+                }
 
-    if (pathLayer) {
-        map.removeLayer(pathLayer);
-        pathLayer = null;
-    }
+                const vehicleList = document.getElementById('vehicleList');
+                vehicleList.innerHTML = '';
 
-    try {
-        console.log('🔍 Buscando todos os veículos...');
-        
-        // Buscar todos os veículos ativos
-        const { data: activeVehicles, error: activeError } = await supabase
-            .rpc('get_latest_locations');
+                vehicles.forEach(vehicle => {
+                    const item = document.createElement('div');
+                    item.className = 'vehicle-item';
+                    item.innerHTML = `
+                        <div class="vehicle-info">
+                            <div class="vehicle-id">🚗 ${vehicle.vehicle_id}</div>
+                            <div class="vehicle-driver">${vehicle.driver_name}</div>
+                        </div>
+                        <div class="vehicle-arrow">›</div>
+                    `;
+                    item.onclick = () => loadVehicle24h(vehicle.vehicle_id);
+                    vehicleList.appendChild(item);
+                });
 
-        console.log('📦 Veículos encontrados:', activeVehicles ? activeVehicles.length : 0);
+                document.getElementById('vehicleSelectorOverlay').classList.add('show');
+                hideLoading();
 
-        if (activeError || !activeVehicles || activeVehicles.length === 0) {
-            alert('Nenhum veículo ativo encontrado');
-            hideLoading();
-            return;
+            } catch (err) {
+                console.error('Erro:', err);
+                alert('Erro ao carregar veículos');
+                hideLoading();
+            }
         }
 
-        const colors = ['#007AFF', '#FF3B30', '#34C759', '#FF9500', '#AF52DE'];
-        let totalPaths = 0;
-        const allCoords = [];
+        // FUNÇÃO PARA CARREGAR TRAJETO 24H
+        async function loadVehicle24h(vehicleId) {
+            document.getElementById('vehicleSelectorOverlay').classList.remove('show');
+            showLoading();
 
-        // Para cada veículo, buscar e desenhar trajeto
-        for (let i = 0; i < activeVehicles.length; i++) {
-            const vehicle = activeVehicles[i];
-            console.log(`🚗 Processando: ${vehicle.vehicle_id}`);
-
-            const { data: trajectory, error: trajError } = await supabase
-                .rpc('get_vehicle_path_24h', { p_vehicle_id: vehicle.vehicle_id });
-
-            if (trajError || !trajectory || trajectory.length === 0) {
-                console.warn(`⚠️ Sem trajeto para ${vehicle.vehicle_id}`);
-                continue;
+            // Limpar mapa
+            Object.values(vehicleMarkers).forEach(m => map.removeLayer(m));
+            vehicleMarkers = {};
+            if (pathLayer) {
+                map.removeLayer(pathLayer);
+                pathLayer = null;
             }
 
-            console.log(`✅ ${vehicle.vehicle_id}: ${trajectory.length} pontos`);
+            try {
+                const { data: trajectory, error } = await supabase
+                    .rpc('get_vehicle_path_24h', { p_vehicle_id: vehicleId });
 
-            const coords = trajectory.map(p => [p.latitude, p.longitude]);
-            
-            // Desenhar linha do trajeto
-            const pathColor = colors[i % colors.length];
-            const path = L.polyline(coords, {
-                color: pathColor,
-                weight: 3,
-                opacity: 0.7
-            }).addTo(map);
+                if (error) {
+                    alert('Erro: ' + error.message);
+                    hideLoading();
+                    return;
+                }
 
-            // Popup no clique da linha
-            path.bindPopup(`
-                <strong>${vehicle.vehicle_id}</strong><br>
-                ${vehicle.driver_name}<br>
-                ${trajectory.length} pontos registrados
-            `);
+                if (!trajectory || trajectory.length === 0) {
+                    alert(`Nenhum trajeto encontrado para ${vehicleId} nas últimas 24h`);
+                    hideLoading();
+                    return;
+                }
 
-            // Marcador de início
-            L.circleMarker(coords[0], {
-                radius: 6,
-                fillColor: pathColor,
-                color: 'white',
-                weight: 2,
-                fillOpacity: 1
-            })
-            .bindPopup(`
-                <strong>🟢 Início - ${vehicle.vehicle_id}</strong><br>
-                ${new Date(trajectory[0].created_at).toLocaleString('pt-BR')}
-            `)
-            .addTo(map);
+                const coords = trajectory.map(p => [p.latitude, p.longitude]);
+                
+                pathLayer = L.polyline(coords, {
+                    color: '#007AFF',
+                    weight: 4,
+                    opacity: 0.8
+                }).addTo(map);
 
-            // Marcador de fim
-            L.circleMarker(coords[coords.length - 1], {
-                radius: 6,
-                fillColor: pathColor,
-                color: 'white',
-                weight: 2,
-                fillOpacity: 1
-            })
-            .bindPopup(`
-                <strong>🔴 Fim - ${vehicle.vehicle_id}</strong><br>
-                ${new Date(trajectory[trajectory.length - 1].created_at).toLocaleString('pt-BR')}
-            `)
-            .addTo(map);
+                const startIcon = L.divIcon({
+                    html: '🟢',
+                    iconSize: [40, 40],
+                    iconAnchor: [20, 40]
+                });
 
-            allCoords.push(...coords);
-            totalPaths++;
-        }
+                const endIcon = L.divIcon({
+                    html: '🔴',
+                    iconSize: [40, 40],
+                    iconAnchor: [20, 40]
+                });
 
-        if (totalPaths === 0) {
-            alert('Nenhum trajeto encontrado nas últimas 24 horas');
+                L.marker(coords[0], { icon: startIcon })
+                    .bindPopup(`
+                        <strong>🟢 Início</strong><br>
+                        ${new Date(trajectory[0].created_at).toLocaleString('pt-BR')}<br>
+                        ${trajectory[0].speed ? trajectory[0].speed.toFixed(1) + ' km/h' : 'Parado'}
+                    `)
+                    .addTo(map);
+
+                L.marker(coords[coords.length - 1], { icon: endIcon })
+                    .bindPopup(`
+                        <strong>🔴 Fim</strong><br>
+                        ${new Date(trajectory[trajectory.length - 1].created_at).toLocaleString('pt-BR')}<br>
+                        ${trajectory[trajectory.length - 1].speed ? trajectory[trajectory.length - 1].speed.toFixed(1) + ' km/h' : 'Parado'}
+                    `)
+                    .addTo(map);
+
+                map.fitBounds(pathLayer.getBounds(), { padding: [50, 50] });
+                updateVehicleCount(1);
+
+            } catch (err) {
+                console.error('Erro:', err);
+                alert('Erro ao processar trajeto');
+            }
+
             hideLoading();
-            return;
         }
 
-        // Ajustar zoom para mostrar todos os trajetos
-        const bounds = L.latLngBounds(allCoords);
-        map.fitBounds(bounds, { padding: [50, 50] });
-
-        updateVehicleCount(totalPaths);
-        console.log(`✅ ${totalPaths} trajetos exibidos!`);
-
-    } catch (err) {
-        console.error('💥 Erro:', err);
-        alert('Erro: ' + err.message);
-    }
-
-    hideLoading();
-}
-
+        // EVENT LISTENERS
         document.getElementById('btnRealtime').addEventListener('click', enableRealtimeMode);
-        document.getElementById('btn24h').addEventListener('click', enable24hMode);
+        document.getElementById('btn24h').addEventListener('click', showVehicleSelector);
+        document.getElementById('btnCancelSelector').addEventListener('click', () => {
+            document.getElementById('vehicleSelectorOverlay').classList.remove('show');
+        });
+
+        // Fechar modal ao clicar fora
+        document.getElementById('vehicleSelectorOverlay').addEventListener('click', (e) => {
+            if (e.target.id === 'vehicleSelectorOverlay') {
+                document.getElementById('vehicleSelectorOverlay').classList.remove('show');
+            }
+        });
 
         enableRealtimeMode();
     </script>
