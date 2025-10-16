@@ -282,48 +282,86 @@
         }
 
         async function enable24hMode() {
-            showLoading();
-            document.getElementById('btn24h').classList.add('active');
-            document.getElementById('btnRealtime').classList.remove('active');
+    showLoading();
+    document.getElementById('btn24h').classList.add('active');
+    document.getElementById('btnRealtime').classList.remove('active');
 
-            if (realtimeChannel) {
-                supabase.removeChannel(realtimeChannel);
-                realtimeChannel = null;
-            }
+    if (realtimeChannel) {
+        supabase.removeChannel(realtimeChannel);
+        realtimeChannel = null;
+    }
 
-            Object.values(vehicleMarkers).forEach(m => map.removeLayer(m));
-            vehicleMarkers = {};
+    Object.values(vehicleMarkers).forEach(m => map.removeLayer(m));
+    vehicleMarkers = {};
 
-            const { data: vehicles } = await supabase
-                .from('map_vehicle_locations')
-                .select('vehicle_id')
-                .limit(1);
+    // ALTERADO: Buscar veículo com mais dados nas últimas 24h
+    const { data: vehicles } = await supabase
+        .from('map_vehicle_locations')
+        .select('vehicle_id')
+        .gte('created_at', new Date(Date.now() - 24*60*60*1000).toISOString())
+        .order('created_at', { ascending: false })
+        .limit(1);
 
-            if (!vehicles || vehicles.length === 0) {
-                alert('Nenhum veículo encontrado');
-                hideLoading();
-                return;
-            }
+    if (!vehicles || vehicles.length === 0) {
+        alert('Nenhum veículo com dados nas últimas 24 horas');
+        hideLoading();
+        return;
+    }
 
-            const { data, error } = await supabase.rpc('get_vehicle_path_24h', { 
-                p_vehicle_id: vehicles[0].vehicle_id 
-            });
+    const vehicleId = vehicles[0].vehicle_id;
+    console.log('🚗 Buscando trajeto de:', vehicleId);
 
-            if (error) {
-                alert('Erro: ' + error.message);
-                hideLoading();
-                return;
-            }
+    const { data, error } = await supabase.rpc('get_vehicle_path_24h', { 
+        p_vehicle_id: vehicleId 
+    });
 
-            if (data && data.length > 0) {
-                const coords = data.map(p => [p.latitude, p.longitude]);
-                pathLayer = L.polyline(coords, { color: '#007AFF', weight: 4 }).addTo(map);
-                map.fitBounds(pathLayer.getBounds(), { padding: [50, 50] });
-                updateVehicleCount(1);
-            }
+    console.log('📍 Trajeto encontrado:', data ? data.length + ' pontos' : 'nenhum', error);
 
-            hideLoading();
-        }
+    if (error) {
+        alert('Erro: ' + error.message);
+        console.error('Erro completo:', error);
+        hideLoading();
+        return;
+    }
+
+    if (data && data.length > 0) {
+        const coords = data.map(p => [p.latitude, p.longitude]);
+        pathLayer = L.polyline(coords, { 
+            color: '#007AFF', 
+            weight: 4,
+            opacity: 0.8 
+        }).addTo(map);
+        
+        // Adicionar marcadores de início e fim
+        const startIcon = L.divIcon({
+            html: '🟢',
+            iconSize: [40, 40],
+            className: 'start-marker'
+        });
+        
+        const endIcon = L.divIcon({
+            html: '🔴',
+            iconSize: [40, 40],
+            className: 'end-marker'
+        });
+        
+        L.marker(coords[0], { icon: startIcon })
+            .bindPopup(`Início: ${new Date(data[0].created_at).toLocaleString('pt-BR')}`)
+            .addTo(map);
+            
+        L.marker(coords[coords.length - 1], { icon: endIcon })
+            .bindPopup(`Fim: ${new Date(data[data.length - 1].created_at).toLocaleString('pt-BR')}`)
+            .addTo(map);
+        
+        map.fitBounds(pathLayer.getBounds(), { padding: [50, 50] });
+        updateVehicleCount(1);
+    } else {
+        alert('Nenhum trajeto encontrado nas últimas 24 horas para o veículo ' + vehicleId);
+        updateVehicleCount(0);
+    }
+
+    hideLoading();
+}
 
         document.getElementById('btnRealtime').addEventListener('click', enableRealtimeMode);
         document.getElementById('btn24h').addEventListener('click', enable24hMode);
