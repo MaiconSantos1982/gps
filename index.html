@@ -281,7 +281,7 @@
             }
         }
 
-        async function enable24hMode() {
+    async function enable24hMode() {
     showLoading();
     document.getElementById('btn24h').classList.add('active');
     document.getElementById('btnRealtime').classList.remove('active');
@@ -294,70 +294,126 @@
     Object.values(vehicleMarkers).forEach(m => map.removeLayer(m));
     vehicleMarkers = {};
 
-    // ALTERADO: Buscar veículo com mais dados nas últimas 24h
-    const { data: vehicles } = await supabase
-        .from('map_vehicle_locations')
-        .select('vehicle_id')
-        .gte('created_at', new Date(Date.now() - 24*60*60*1000).toISOString())
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-    if (!vehicles || vehicles.length === 0) {
-        alert('Nenhum veículo com dados nas últimas 24 horas');
-        hideLoading();
-        return;
+    if (pathLayer) {
+        map.removeLayer(pathLayer);
+        pathLayer = null;
     }
 
-    const vehicleId = vehicles[0].vehicle_id;
-    console.log('🚗 Buscando trajeto de:', vehicleId);
+    try {
+        // Buscar todos os veículos com dados nas últimas 24h
+        const { data: recentVehicles, error: vehicleError } = await supabase
+            .from('map_vehicle_locations')
+            .select('vehicle_id')
+            .gte('created_at', new Date(Date.now() - 24*60*60*1000).toISOString())
+            .order('created_at', { ascending: false });
 
-    const { data, error } = await supabase.rpc('get_vehicle_path_24h', { 
-        p_vehicle_id: vehicleId 
-    });
+        console.log('🚗 Veículos recentes:', recentVehicles);
 
-    console.log('📍 Trajeto encontrado:', data ? data.length + ' pontos' : 'nenhum', error);
+        if (vehicleError || !recentVehicles || recentVehicles.length === 0) {
+            alert('Nenhum veículo com dados nas últimas 24 horas');
+            console.error('Erro:', vehicleError);
+            hideLoading();
+            return;
+        }
 
-    if (error) {
-        alert('Erro: ' + error.message);
-        console.error('Erro completo:', error);
-        hideLoading();
-        return;
-    }
+        // Pegar o primeiro veículo único
+        const vehicleId = recentVehicles[0].vehicle_id;
+        console.log('📍 Buscando trajeto de:', vehicleId);
 
-    if (data && data.length > 0) {
-        const coords = data.map(p => [p.latitude, p.longitude]);
-        pathLayer = L.polyline(coords, { 
-            color: '#007AFF', 
+        // Buscar trajeto via RPC
+        const { data: trajectoryData, error: trajectoryError } = await supabase
+            .rpc('get_vehicle_path_24h', { p_vehicle_id: vehicleId });
+
+        console.log('📦 Resposta RPC:', { 
+            data: trajectoryData, 
+            error: trajectoryError,
+            length: trajectoryData ? trajectoryData.length : 0 
+        });
+
+        if (trajectoryError) {
+            alert('Erro ao buscar trajeto: ' + trajectoryError.message);
+            console.error('Erro completo:', trajectoryError);
+            hideLoading();
+            return;
+        }
+
+        // IMPORTANTE: Verificar se data existe e tem conteúdo
+        if (!trajectoryData || trajectoryData.length === 0) {
+            alert('Nenhum trajeto encontrado nas últimas 24 horas para ' + vehicleId);
+            console.warn('⚠️ Array vazio ou null');
+            hideLoading();
+            return;
+        }
+
+        console.log('✅ Pontos do trajeto:', trajectoryData.length);
+        console.log('📍 Primeiro ponto:', trajectoryData[0]);
+        console.log('📍 Último ponto:', trajectoryData[trajectoryData.length - 1]);
+
+        // Criar array de coordenadas
+        const coordinates = trajectoryData.map(point => {
+            console.log('Processando ponto:', point);
+            return [point.latitude, point.longitude];
+        });
+
+        console.log('🗺️ Coordenadas processadas:', coordinates.length);
+
+        // Desenhar linha do trajeto
+        pathLayer = L.polyline(coordinates, {
+            color: '#007AFF',
             weight: 4,
-            opacity: 0.8 
+            opacity: 0.8,
+            smoothFactor: 1
         }).addTo(map);
-        
-        // Adicionar marcadores de início e fim
+
+        // Ícones de início e fim
         const startIcon = L.divIcon({
             html: '🟢',
             iconSize: [40, 40],
+            iconAnchor: [20, 40],
             className: 'start-marker'
         });
-        
+
         const endIcon = L.divIcon({
             html: '🔴',
             iconSize: [40, 40],
+            iconAnchor: [20, 40],
             className: 'end-marker'
         });
-        
-        L.marker(coords[0], { icon: startIcon })
-            .bindPopup(`Início: ${new Date(data[0].created_at).toLocaleString('pt-BR')}`)
+
+        // Marcar início
+        L.marker(coordinates[0], { icon: startIcon })
+            .bindPopup(`
+                <div style="padding: 10px;">
+                    <strong>🟢 Início do Trajeto</strong><br>
+                    Veículo: ${vehicleId}<br>
+                    Horário: ${new Date(trajectoryData[0].created_at).toLocaleString('pt-BR')}<br>
+                    Velocidade: ${trajectoryData[0].speed ? trajectoryData[0].speed.toFixed(1) + ' km/h' : 'N/A'}
+                </div>
+            `)
             .addTo(map);
-            
-        L.marker(coords[coords.length - 1], { icon: endIcon })
-            .bindPopup(`Fim: ${new Date(data[data.length - 1].created_at).toLocaleString('pt-BR')}`)
+
+        // Marcar fim
+        L.marker(coordinates[coordinates.length - 1], { icon: endIcon })
+            .bindPopup(`
+                <div style="padding: 10px;">
+                    <strong>🔴 Fim do Trajeto</strong><br>
+                    Veículo: ${vehicleId}<br>
+                    Horário: ${new Date(trajectoryData[trajectoryData.length - 1].created_at).toLocaleString('pt-BR')}<br>
+                    Velocidade: ${trajectoryData[trajectoryData.length - 1].speed ? trajectoryData[trajectoryData.length - 1].speed.toFixed(1) + ' km/h' : 'N/A'}
+                </div>
+            `)
             .addTo(map);
-        
+
+        // Ajustar zoom para mostrar todo o trajeto
         map.fitBounds(pathLayer.getBounds(), { padding: [50, 50] });
+
         updateVehicleCount(1);
-    } else {
-        alert('Nenhum trajeto encontrado nas últimas 24 horas para o veículo ' + vehicleId);
-        updateVehicleCount(0);
+
+        console.log('✅ Trajeto renderizado com sucesso!');
+
+    } catch (error) {
+        console.error('💥 Erro ao processar trajeto:', error);
+        alert('Erro ao processar trajeto: ' + error.message);
     }
 
     hideLoading();
