@@ -3,25 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Rastreamento de Frota</title>
     
-    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <style>
         :root {
             --ios-blue: #007AFF;
-            --ios-blue-hover: #0051D5;
             --ios-gray: #8E8E93;
             --ios-light-gray: #F2F2F7;
             --ios-border: #E5E5EA;
@@ -32,14 +22,10 @@
             --ios-shadow: rgba(0, 0, 0, 0.08);
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             background: var(--ios-light-gray);
             color: var(--ios-text);
             overflow: hidden;
@@ -49,8 +35,6 @@
             background: var(--ios-bg);
             border-bottom: 1px solid var(--ios-border);
             padding: 16px 20px;
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
             position: relative;
             z-index: 1000;
         }
@@ -58,7 +42,6 @@
         .header-title {
             font-size: 22px;
             font-weight: 600;
-            color: var(--ios-text);
             margin: 0;
             letter-spacing: -0.5px;
         }
@@ -67,7 +50,6 @@
             font-size: 13px;
             color: var(--ios-secondary-text);
             margin: 4px 0 0 0;
-            font-weight: 400;
         }
 
         .ios-button-group {
@@ -89,11 +71,6 @@
             font-weight: 500;
             cursor: pointer;
             transition: all 0.2s ease;
-            white-space: nowrap;
-        }
-
-        .ios-btn:hover {
-            background: rgba(0, 122, 255, 0.1);
         }
 
         .ios-btn.active {
@@ -105,7 +82,6 @@
         #map {
             height: calc(100vh - 88px);
             width: 100%;
-            border: none;
         }
 
         .loading-indicator {
@@ -119,13 +95,9 @@
             box-shadow: 0 4px 16px var(--ios-shadow);
             z-index: 999;
             display: none;
-            align-items: center;
-            gap: 12px;
         }
 
-        .loading-indicator.show {
-            display: flex;
-        }
+        .loading-indicator.show { display: flex; align-items: center; gap: 12px; }
 
         .spinner {
             width: 20px;
@@ -136,39 +108,25 @@
             animation: spin 0.8s linear infinite;
         }
 
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
-        .loading-text {
-            font-size: 15px;
-            color: var(--ios-text);
-            font-weight: 500;
+        .vehicle-marker {
+            background: linear-gradient(135deg, var(--ios-blue) 0%, #0051D5 100%);
+            border: 3px solid white;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            box-shadow: 0 4px 12px rgba(0, 122, 255, 0.4);
         }
 
         .leaflet-popup-content-wrapper {
-            background: var(--ios-bg);
             border-radius: 16px;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-            padding: 0;
-            overflow: hidden;
-        }
-
-        .leaflet-popup-content {
-            margin: 0;
-            padding: 16px;
-            font-family: 'Inter', sans-serif;
-            min-width: 200px;
-        }
-
-        .leaflet-popup-tip-container {
-            display: none;
         }
 
         .popup-header {
             font-size: 17px;
             font-weight: 600;
-            color: var(--ios-text);
             margin-bottom: 12px;
             padding-bottom: 12px;
             border-bottom: 1px solid var(--ios-border);
@@ -180,80 +138,6 @@
             padding: 8px 0;
             font-size: 14px;
         }
-
-        .popup-label {
-            color: var(--ios-secondary-text);
-            font-weight: 400;
-        }
-
-        .popup-value {
-            color: var(--ios-text);
-            font-weight: 500;
-        }
-
-        .vehicle-marker {
-            background: linear-gradient(135deg, var(--ios-blue) 0%, #0051D5 100%);
-            border: 3px solid var(--ios-bg);
-            border-radius: 50%;
-            width: 28px;
-            height: 28px;
-            box-shadow: 0 4px 12px rgba(0, 122, 255, 0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            animation: markerPulse 2s infinite;
-        }
-
-        @keyframes markerPulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-        }
-
-        .vehicle-marker::after {
-            content: '';
-            width: 8px;
-            height: 8px;
-            background: white;
-            border-radius: 50%;
-        }
-
-        @media (max-width: 768px) {
-            .header {
-                padding: 12px 16px;
-            }
-
-            .header-title {
-                font-size: 20px;
-            }
-
-            .ios-btn {
-                padding: 8px 16px;
-                font-size: 14px;
-            }
-
-            #map {
-                height: calc(100vh - 140px);
-            }
-        }
-
-        .start-marker, .end-marker {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-        }
-
-        .start-marker {
-            background: linear-gradient(135deg, #34C759 0%, #30D158 100%);
-        }
-
-        .end-marker {
-            background: linear-gradient(135deg, #FF3B30 0%, #FF453A 100%);
-        }
     </style>
 </head>
 <body>
@@ -261,22 +145,18 @@
         <div class="d-flex justify-content-between align-items-center">
             <div>
                 <h1 class="header-title">🚗 Rastreamento de Frota</h1>
-                <p class="header-subtitle" id="vehicleCount">Carregando veículos...</p>
+                <p class="header-subtitle" id="vehicleCount">Carregando...</p>
             </div>
             <div class="ios-button-group">
-                <button id="btnRealtime" class="ios-btn active">
-                    📍 Tempo Real
-                </button>
-                <button id="btn24h" class="ios-btn">
-                    🕐 24 Horas
-                </button>
+                <button id="btnRealtime" class="ios-btn active">📍 Tempo Real</button>
+                <button id="btn24h" class="ios-btn">🕐 24 Horas</button>
             </div>
         </div>
     </div>
 
     <div class="loading-indicator" id="loadingIndicator">
         <div class="spinner"></div>
-        <span class="loading-text">Atualizando localização...</span>
+        <span>Atualizando...</span>
     </div>
 
     <div id="map"></div>
@@ -289,106 +169,31 @@
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp0bGRkb3V0Z2V4dGRteWl3b3hsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzM5MTAyNTksImV4cCI6MjA0OTQ4NjI1OX0.l9qwcAL4h9Ho_IU9uNhm2wyBHaYgNbor98a17-43EpI';
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        const map = L.map('map', {
-            zoomControl: true,
-            attributionControl: false
-        }).setView([-30.0346, -51.2177], 12);
-
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap'
-        }).addTo(map);
+        const map = L.map('map').setView([-30.0346, -51.2177], 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
         let vehicleMarkers = {};
         let pathLayer = null;
         let realtimeChannel = null;
-        let currentMode = 'realtime';
-        let loadingTimeout = null;
 
-        const vehicleIcon = L.divIcon({
-            className: 'vehicle-marker',
-            iconSize: [28, 28],
-            iconAnchor: [14, 14],
-            popupAnchor: [0, -14]
-        });
-
-        const startIcon = L.divIcon({
-            className: 'start-marker',
-            html: '🟢',
-            iconSize: [40, 40],
-            iconAnchor: [20, 40],
-            popupAnchor: [0, -40]
-        });
-
-        const endIcon = L.divIcon({
-            className: 'end-marker',
-            html: '🔴',
-            iconSize: [40, 40],
-            iconAnchor: [20, 40],
-            popupAnchor: [0, -40]
-        });
+        const vehicleIcon = L.divIcon({ className: 'vehicle-marker', iconSize: [28, 28] });
 
         function showLoading() {
             document.getElementById('loadingIndicator').classList.add('show');
         }
 
         function hideLoading() {
-            if (loadingTimeout) clearTimeout(loadingTimeout);
-            loadingTimeout = setTimeout(() => {
-                document.getElementById('loadingIndicator').classList.remove('show');
-            }, 300);
+            setTimeout(() => document.getElementById('loadingIndicator').classList.remove('show'), 300);
         }
 
         function updateVehicleCount(count) {
-            const text = count === 1 ? '1 veículo ativo' : `${count} veículos ativos`;
-            document.getElementById('vehicleCount').textContent = text;
+            document.getElementById('vehicleCount').textContent = 
+                count === 1 ? '1 veículo ativo' : `${count} veículos ativos`;
         }
 
-        function formatTimestamp(timestamp) {
-            const date = new Date(timestamp);
-            const now = new Date();
-            const diff = Math.floor((now - date) / 1000);
-
-            if (diff < 60) return 'agora há pouco';
-            if (diff < 3600) return `há ${Math.floor(diff / 60)} min`;
-            if (diff < 86400) return `há ${Math.floor(diff / 3600)} h`;
-            
-            return date.toLocaleString('pt-BR', {
-                day: '2-digit',
-                month: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        }
-
-        // FUNÇÃO PRINCIPAL: Buscar coordenadas do Supabase com conversão
-        async function getLocationCoordinates(locationId) {
-            const { data, error } = await supabase
-                .rpc('st_astext_location', { location_id: locationId });
-            
-            if (error || !data || data.length === 0) {
-                console.error('Erro ao buscar coordenadas:', error);
-                return null;
-            }
-            
-            // Parsear resultado "POINT(lng lat)"
-            const pointStr = data[0].st_astext;
-            const match = pointStr.match(/POINT\(([-\d.]+)\s+([-\d.]+)\)/);
-            
-            if (match) {
-                return {
-                    lng: parseFloat(match[1]),
-                    lat: parseFloat(match[2])
-                };
-            }
-            
-            return null;
-        }
-
+        // USAR RPC SIMPLES
         async function enableRealtimeMode() {
             showLoading();
-            currentMode = 'realtime';
-            
             document.getElementById('btnRealtime').classList.add('active');
             document.getElementById('btn24h').classList.remove('active');
 
@@ -398,116 +203,86 @@
             }
 
             try {
-                const { data: allData, error } = await supabase
-                    .from('map_vehicle_locations')
-                    .select('id, vehicle_id, driver_name, speed, accuracy, created_at')
-                    .order('created_at', { ascending: false });
+                console.log('🔍 Buscando veículos...');
+                
+                const { data, error } = await supabase.rpc('get_latest_locations');
+
+                console.log('📦 Resposta Supabase:', { data, error });
 
                 if (error) {
-                    console.error('Erro ao buscar localizações:', error);
+                    console.error('❌ Erro:', error);
+                    alert('Erro ao buscar veículos: ' + error.message);
                     hideLoading();
                     return;
                 }
 
-                const latestByVehicle = {};
-                if (allData && allData.length > 0) {
-                    allData.forEach(loc => {
-                        if (!latestByVehicle[loc.vehicle_id] || 
-                            new Date(loc.created_at) > new Date(latestByVehicle[loc.vehicle_id].created_at)) {
-                            latestByVehicle[loc.vehicle_id] = loc;
-                        }
+                if (data && data.length > 0) {
+                    console.log('✅ Veículos encontrados:', data.length);
+                    data.forEach(loc => {
+                        console.log('Veículo:', loc);
+                        updateVehicleMarker(loc);
                     });
-                    
-                    const data = Object.values(latestByVehicle);
-                    
-                    for (const loc of data) {
-                        await updateVehicleMarker(loc);
-                    }
-                    
                     updateVehicleCount(data.length);
                 } else {
+                    console.warn('⚠️ Nenhum veículo encontrado');
                     updateVehicleCount(0);
                 }
             } catch (err) {
-                console.error('Erro:', err);
+                console.error('💥 Erro fatal:', err);
             }
 
-            if (realtimeChannel) {
-                supabase.removeChannel(realtimeChannel);
-            }
+            if (realtimeChannel) supabase.removeChannel(realtimeChannel);
 
-            realtimeChannel = supabase
-                .channel('vehicle-updates')
+            realtimeChannel = supabase.channel('updates')
                 .on('postgres_changes', {
                     event: 'INSERT',
                     schema: 'public',
                     table: 'map_vehicle_locations'
-                }, (payload) => {
-                    console.log('Nova localização:', payload.new);
-                    updateVehicleMarker(payload.new);
+                }, async (payload) => {
+                    console.log('🆕 Nova localização:', payload.new);
+                    const { data } = await supabase.rpc('get_location_coords', { loc_id: payload.new.id });
+                    if (data && data[0]) {
+                        updateVehicleMarker({ ...payload.new, ...data[0] });
+                    }
                 })
                 .subscribe();
 
             hideLoading();
         }
 
-        async function updateVehicleMarker(location) {
-            const coords = await getLocationCoordinates(location.id);
-            
-            if (!coords) {
-                console.warn('Não foi possível obter coordenadas para:', location.vehicle_id);
+        function updateVehicleMarker(loc) {
+            if (!loc.lat || !loc.lng) {
+                console.warn('❌ Sem coordenadas:', loc);
                 return;
             }
+
+            const latlng = [loc.lat, loc.lng];
             
-            const latlng = [coords.lat, coords.lng];
-            
-            if (vehicleMarkers[location.vehicle_id]) {
-                vehicleMarkers[location.vehicle_id].setLatLng(latlng);
-                vehicleMarkers[location.vehicle_id].setPopupContent(createPopupContent(location));
+            if (vehicleMarkers[loc.vehicle_id]) {
+                vehicleMarkers[loc.vehicle_id].setLatLng(latlng);
             } else {
                 const marker = L.marker(latlng, { icon: vehicleIcon }).addTo(map);
-                marker.bindPopup(createPopupContent(location), {
-                    maxWidth: 300,
-                    className: 'ios-popup'
-                });
-                vehicleMarkers[location.vehicle_id] = marker;
+                marker.bindPopup(`
+                    <div class="popup-header">${loc.driver_name}</div>
+                    <div class="popup-row">
+                        <span>Veículo:</span>
+                        <strong>${loc.vehicle_id}</strong>
+                    </div>
+                    <div class="popup-row">
+                        <span>Velocidade:</span>
+                        <strong>${loc.speed ? loc.speed.toFixed(1) + ' km/h' : 'Parado'}</strong>
+                    </div>
+                `);
+                vehicleMarkers[loc.vehicle_id] = marker;
+                
+                if (Object.keys(vehicleMarkers).length === 1) {
+                    map.setView(latlng, 14);
+                }
             }
-
-            if (Object.keys(vehicleMarkers).length === 1) {
-                map.setView(latlng, 14);
-            }
-        }
-
-        function createPopupContent(location) {
-            const speed = location.speed ? `${location.speed.toFixed(1)} km/h` : 'Parado';
-            const accuracy = location.accuracy ? `${location.accuracy.toFixed(0)}m` : 'N/A';
-            const time = formatTimestamp(location.created_at);
-
-            return `
-                <div class="popup-header">${location.driver_name}</div>
-                <div class="popup-row">
-                    <span class="popup-label">Veículo</span>
-                    <span class="popup-value">${location.vehicle_id}</span>
-                </div>
-                <div class="popup-row">
-                    <span class="popup-label">Velocidade</span>
-                    <span class="popup-value">${speed}</span>
-                </div>
-                <div class="popup-row">
-                    <span class="popup-label">Precisão</span>
-                    <span class="popup-value">${accuracy}</span>
-                </div>
-                <div class="popup-row">
-                    <span class="popup-label">Atualizado</span>
-                    <span class="popup-value">${time}</span>
-                </div>
-            `;
         }
 
         async function enable24hMode() {
             showLoading();
-            currentMode = '24h';
-
             document.getElementById('btn24h').classList.add('active');
             document.getElementById('btnRealtime').classList.remove('active');
 
@@ -516,13 +291,12 @@
                 realtimeChannel = null;
             }
 
-            Object.values(vehicleMarkers).forEach(marker => map.removeLayer(marker));
+            Object.values(vehicleMarkers).forEach(m => map.removeLayer(m));
             vehicleMarkers = {};
 
             const { data: vehicles } = await supabase
                 .from('map_vehicle_locations')
                 .select('vehicle_id')
-                .order('created_at', { ascending: false })
                 .limit(1);
 
             if (!vehicles || vehicles.length === 0) {
@@ -531,58 +305,21 @@
                 return;
             }
 
-            const vehicleId = vehicles[0].vehicle_id;
-
-            const { data, error } = await supabase
-                .rpc('get_vehicle_path_24h', { p_vehicle_id: vehicleId });
+            const { data, error } = await supabase.rpc('get_vehicle_path_24h', { 
+                p_vehicle_id: vehicles[0].vehicle_id 
+            });
 
             if (error) {
-                console.error('Erro ao buscar trajeto:', error);
-                alert('Erro ao carregar trajeto: ' + error.message);
+                alert('Erro: ' + error.message);
                 hideLoading();
                 return;
             }
 
             if (data && data.length > 0) {
-                const coordinates = data.map(point => [point.latitude, point.longitude]);
-
-                if (pathLayer) {
-                    map.removeLayer(pathLayer);
-                }
-
-                pathLayer = L.polyline(coordinates, {
-                    color: '#007AFF',
-                    weight: 4,
-                    opacity: 0.8,
-                    smoothFactor: 1
-                }).addTo(map);
-
-                L.marker(coordinates[0], { icon: startIcon })
-                    .bindPopup(`
-                        <div class="popup-header">Início do Trajeto</div>
-                        <div class="popup-row">
-                            <span class="popup-label">Horário</span>
-                            <span class="popup-value">${new Date(data[0].created_at).toLocaleString('pt-BR')}</span>
-                        </div>
-                    `)
-                    .addTo(map);
-
-                L.marker(coordinates[coordinates.length - 1], { icon: endIcon })
-                    .bindPopup(`
-                        <div class="popup-header">Fim do Trajeto</div>
-                        <div class="popup-row">
-                            <span class="popup-label">Horário</span>
-                            <span class="popup-value">${new Date(data[data.length - 1].created_at).toLocaleString('pt-BR')}</span>
-                        </div>
-                    `)
-                    .addTo(map);
-
+                const coords = data.map(p => [p.latitude, p.longitude]);
+                pathLayer = L.polyline(coords, { color: '#007AFF', weight: 4 }).addTo(map);
                 map.fitBounds(pathLayer.getBounds(), { padding: [50, 50] });
-                
                 updateVehicleCount(1);
-            } else {
-                alert('Nenhum trajeto encontrado nas últimas 24 horas');
-                updateVehicleCount(0);
             }
 
             hideLoading();
