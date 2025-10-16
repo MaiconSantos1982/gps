@@ -300,120 +300,104 @@
     }
 
     try {
-        // Buscar todos os veículos com dados nas últimas 24h
-        const { data: recentVehicles, error: vehicleError } = await supabase
-            .from('map_vehicle_locations')
-            .select('vehicle_id')
-            .gte('created_at', new Date(Date.now() - 24*60*60*1000).toISOString())
-            .order('created_at', { ascending: false });
+        console.log('🔍 Buscando todos os veículos...');
+        
+        // Buscar todos os veículos ativos
+        const { data: activeVehicles, error: activeError } = await supabase
+            .rpc('get_latest_locations');
 
-        console.log('🚗 Veículos recentes:', recentVehicles);
+        console.log('📦 Veículos encontrados:', activeVehicles ? activeVehicles.length : 0);
 
-        if (vehicleError || !recentVehicles || recentVehicles.length === 0) {
-            alert('Nenhum veículo com dados nas últimas 24 horas');
-            console.error('Erro:', vehicleError);
+        if (activeError || !activeVehicles || activeVehicles.length === 0) {
+            alert('Nenhum veículo ativo encontrado');
             hideLoading();
             return;
         }
 
-        // Pegar o primeiro veículo único
-        const vehicleId = recentVehicles[0].vehicle_id;
-        console.log('📍 Buscando trajeto de:', vehicleId);
+        const colors = ['#007AFF', '#FF3B30', '#34C759', '#FF9500', '#AF52DE'];
+        let totalPaths = 0;
+        const allCoords = [];
 
-        // Buscar trajeto via RPC
-        const { data: trajectoryData, error: trajectoryError } = await supabase
-            .rpc('get_vehicle_path_24h', { p_vehicle_id: vehicleId });
+        // Para cada veículo, buscar e desenhar trajeto
+        for (let i = 0; i < activeVehicles.length; i++) {
+            const vehicle = activeVehicles[i];
+            console.log(`🚗 Processando: ${vehicle.vehicle_id}`);
 
-        console.log('📦 Resposta RPC:', { 
-            data: trajectoryData, 
-            error: trajectoryError,
-            length: trajectoryData ? trajectoryData.length : 0 
-        });
+            const { data: trajectory, error: trajError } = await supabase
+                .rpc('get_vehicle_path_24h', { p_vehicle_id: vehicle.vehicle_id });
 
-        if (trajectoryError) {
-            alert('Erro ao buscar trajeto: ' + trajectoryError.message);
-            console.error('Erro completo:', trajectoryError);
-            hideLoading();
-            return;
-        }
+            if (trajError || !trajectory || trajectory.length === 0) {
+                console.warn(`⚠️ Sem trajeto para ${vehicle.vehicle_id}`);
+                continue;
+            }
 
-        // IMPORTANTE: Verificar se data existe e tem conteúdo
-        if (!trajectoryData || trajectoryData.length === 0) {
-            alert('Nenhum trajeto encontrado nas últimas 24 horas para ' + vehicleId);
-            console.warn('⚠️ Array vazio ou null');
-            hideLoading();
-            return;
-        }
+            console.log(`✅ ${vehicle.vehicle_id}: ${trajectory.length} pontos`);
 
-        console.log('✅ Pontos do trajeto:', trajectoryData.length);
-        console.log('📍 Primeiro ponto:', trajectoryData[0]);
-        console.log('📍 Último ponto:', trajectoryData[trajectoryData.length - 1]);
+            const coords = trajectory.map(p => [p.latitude, p.longitude]);
+            
+            // Desenhar linha do trajeto
+            const pathColor = colors[i % colors.length];
+            const path = L.polyline(coords, {
+                color: pathColor,
+                weight: 3,
+                opacity: 0.7
+            }).addTo(map);
 
-        // Criar array de coordenadas
-        const coordinates = trajectoryData.map(point => {
-            console.log('Processando ponto:', point);
-            return [point.latitude, point.longitude];
-        });
+            // Popup no clique da linha
+            path.bindPopup(`
+                <strong>${vehicle.vehicle_id}</strong><br>
+                ${vehicle.driver_name}<br>
+                ${trajectory.length} pontos registrados
+            `);
 
-        console.log('🗺️ Coordenadas processadas:', coordinates.length);
-
-        // Desenhar linha do trajeto
-        pathLayer = L.polyline(coordinates, {
-            color: '#007AFF',
-            weight: 4,
-            opacity: 0.8,
-            smoothFactor: 1
-        }).addTo(map);
-
-        // Ícones de início e fim
-        const startIcon = L.divIcon({
-            html: '🟢',
-            iconSize: [40, 40],
-            iconAnchor: [20, 40],
-            className: 'start-marker'
-        });
-
-        const endIcon = L.divIcon({
-            html: '🔴',
-            iconSize: [40, 40],
-            iconAnchor: [20, 40],
-            className: 'end-marker'
-        });
-
-        // Marcar início
-        L.marker(coordinates[0], { icon: startIcon })
+            // Marcador de início
+            L.circleMarker(coords[0], {
+                radius: 6,
+                fillColor: pathColor,
+                color: 'white',
+                weight: 2,
+                fillOpacity: 1
+            })
             .bindPopup(`
-                <div style="padding: 10px;">
-                    <strong>🟢 Início do Trajeto</strong><br>
-                    Veículo: ${vehicleId}<br>
-                    Horário: ${new Date(trajectoryData[0].created_at).toLocaleString('pt-BR')}<br>
-                    Velocidade: ${trajectoryData[0].speed ? trajectoryData[0].speed.toFixed(1) + ' km/h' : 'N/A'}
-                </div>
+                <strong>🟢 Início - ${vehicle.vehicle_id}</strong><br>
+                ${new Date(trajectory[0].created_at).toLocaleString('pt-BR')}
             `)
             .addTo(map);
 
-        // Marcar fim
-        L.marker(coordinates[coordinates.length - 1], { icon: endIcon })
+            // Marcador de fim
+            L.circleMarker(coords[coords.length - 1], {
+                radius: 6,
+                fillColor: pathColor,
+                color: 'white',
+                weight: 2,
+                fillOpacity: 1
+            })
             .bindPopup(`
-                <div style="padding: 10px;">
-                    <strong>🔴 Fim do Trajeto</strong><br>
-                    Veículo: ${vehicleId}<br>
-                    Horário: ${new Date(trajectoryData[trajectoryData.length - 1].created_at).toLocaleString('pt-BR')}<br>
-                    Velocidade: ${trajectoryData[trajectoryData.length - 1].speed ? trajectoryData[trajectoryData.length - 1].speed.toFixed(1) + ' km/h' : 'N/A'}
-                </div>
+                <strong>🔴 Fim - ${vehicle.vehicle_id}</strong><br>
+                ${new Date(trajectory[trajectory.length - 1].created_at).toLocaleString('pt-BR')}
             `)
             .addTo(map);
 
-        // Ajustar zoom para mostrar todo o trajeto
-        map.fitBounds(pathLayer.getBounds(), { padding: [50, 50] });
+            allCoords.push(...coords);
+            totalPaths++;
+        }
 
-        updateVehicleCount(1);
+        if (totalPaths === 0) {
+            alert('Nenhum trajeto encontrado nas últimas 24 horas');
+            hideLoading();
+            return;
+        }
 
-        console.log('✅ Trajeto renderizado com sucesso!');
+        // Ajustar zoom para mostrar todos os trajetos
+        const bounds = L.latLngBounds(allCoords);
+        map.fitBounds(bounds, { padding: [50, 50] });
 
-    } catch (error) {
-        console.error('💥 Erro ao processar trajeto:', error);
-        alert('Erro ao processar trajeto: ' + error.message);
+        updateVehicleCount(totalPaths);
+        console.log(`✅ ${totalPaths} trajetos exibidos!`);
+
+    } catch (err) {
+        console.error('💥 Erro:', err);
+        alert('Erro: ' + err.message);
     }
 
     hideLoading();
