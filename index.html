@@ -52,13 +52,18 @@
             margin: 4px 0 0 0;
         }
 
+        .header-controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
         .ios-button-group {
             display: flex;
             gap: 8px;
             background: var(--ios-light-gray);
             padding: 4px;
             border-radius: 12px;
-            width: fit-content;
         }
 
         .ios-btn {
@@ -71,12 +76,46 @@
             font-weight: 500;
             cursor: pointer;
             transition: all 0.2s ease;
+            white-space: nowrap;
         }
 
         .ios-btn.active {
             background: var(--ios-bg);
             color: var(--ios-blue);
             box-shadow: 0 2px 8px var(--ios-shadow);
+        }
+
+        /* Dropdown Estilo iOS */
+        .vehicle-selector-container {
+            position: relative;
+            display: none;
+        }
+
+        .vehicle-selector-container.show {
+            display: block;
+        }
+
+        .vehicle-dropdown {
+            min-width: 200px;
+            padding: 6px 12px;
+            border: 1px solid var(--ios-border);
+            border-radius: 10px;
+            background: var(--ios-bg);
+            color: var(--ios-text);
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%238E8E93' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 36px;
+        }
+
+        .vehicle-dropdown:focus {
+            outline: none;
+            border-color: var(--ios-blue);
+            box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.1);
         }
 
         #map {
@@ -110,6 +149,7 @@
 
         @keyframes spin { to { transform: rotate(360deg); } }
 
+        /* Remover quadrado branco dos marcadores */
         .vehicle-marker {
             background: linear-gradient(135deg, var(--ios-blue) 0%, #0051D5 100%);
             border: 3px solid white;
@@ -117,6 +157,15 @@
             width: 28px;
             height: 28px;
             box-shadow: 0 4px 12px rgba(0, 122, 255, 0.4);
+        }
+
+        /* Remover fundo branco dos ícones de início/fim */
+        .start-marker, .end-marker {
+            background: transparent !important;
+            border: none !important;
+            font-size: 32px;
+            text-align: center;
+            line-height: 40px;
         }
 
         .leaflet-popup-content-wrapper {
@@ -139,138 +188,11 @@
             font-size: 14px;
         }
 
-        /* Modal de Seleção de Veículo */
-        .vehicle-selector-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(10px);
-            z-index: 2000;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            animation: fadeIn 0.2s;
-        }
-
-        .vehicle-selector-overlay.show {
-            display: flex;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        .vehicle-selector {
-            background: var(--ios-bg);
-            border-radius: 20px;
-            width: 90%;
-            max-width: 400px;
-            max-height: 80vh;
-            overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            animation: slideUp 0.3s;
-        }
-
-        @keyframes slideUp {
-            from { transform: translateY(50px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-
-        .vehicle-selector-header {
-            padding: 20px;
-            border-bottom: 1px solid var(--ios-border);
-            text-align: center;
-        }
-
-        .vehicle-selector-title {
-            font-size: 20px;
-            font-weight: 600;
-            margin-bottom: 6px;
-        }
-
-        .vehicle-selector-subtitle {
-            font-size: 14px;
-            color: var(--ios-secondary-text);
-        }
-
-        .vehicle-list {
-            max-height: 400px;
-            overflow-y: auto;
-        }
-
-        .vehicle-item {
-            padding: 16px 20px;
-            border-bottom: 1px solid var(--ios-border);
-            cursor: pointer;
-            transition: background 0.2s;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .vehicle-item:hover {
-            background: var(--ios-light-gray);
-        }
-
-        .vehicle-item:active {
-            background: #E5E5EA;
-        }
-
-        .vehicle-item:last-child {
-            border-bottom: none;
-        }
-
-        .vehicle-info {
-            flex: 1;
-        }
-
-        .vehicle-id {
-            font-size: 16px;
-            font-weight: 600;
-            color: var(--ios-text);
-        }
-
-        .vehicle-driver {
-            font-size: 14px;
-            color: var(--ios-secondary-text);
-            margin-top: 2px;
-        }
-
-        .vehicle-arrow {
-            color: var(--ios-gray);
-            font-size: 18px;
-        }
-
-        .vehicle-selector-footer {
-            padding: 12px;
-            border-top: 1px solid var(--ios-border);
-        }
-
-        .btn-cancel {
-            width: 100%;
-            padding: 14px;
-            border: none;
-            border-radius: 12px;
-            background: var(--ios-light-gray);
-            color: var(--ios-blue);
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn-cancel:hover {
-            background: #E5E5EA;
-        }
-
         @media (max-width: 768px) {
             .header { padding: 12px 16px; }
             .header-title { font-size: 20px; }
             .ios-btn { padding: 8px 16px; font-size: 14px; }
+            .header-controls { flex-direction: column; align-items: flex-start; gap: 8px; }
             #map { height: calc(100vh - 140px); }
         }
     </style>
@@ -282,9 +204,16 @@
                 <h1 class="header-title">🚗 Rastreamento de Frota</h1>
                 <p class="header-subtitle" id="vehicleCount">Carregando...</p>
             </div>
-            <div class="ios-button-group">
-                <button id="btnRealtime" class="ios-btn active">📍 Tempo Real</button>
-                <button id="btn24h" class="ios-btn">🕐 24 Horas</button>
+            <div class="header-controls">
+                <div class="ios-button-group">
+                    <button id="btnRealtime" class="ios-btn active">📍 Tempo Real</button>
+                    <button id="btn24h" class="ios-btn">🕐 24 Horas</button>
+                </div>
+                <div class="vehicle-selector-container" id="vehicleSelectorContainer">
+                    <select class="vehicle-dropdown" id="vehicleDropdown">
+                        <option value="">Selecione o veículo</option>
+                    </select>
+                </div>
             </div>
         </div>
     </div>
@@ -292,22 +221,6 @@
     <div class="loading-indicator" id="loadingIndicator">
         <div class="spinner"></div>
         <span>Atualizando...</span>
-    </div>
-
-    <!-- Modal de Seleção de Veículo -->
-    <div class="vehicle-selector-overlay" id="vehicleSelectorOverlay">
-        <div class="vehicle-selector">
-            <div class="vehicle-selector-header">
-                <div class="vehicle-selector-title">Selecione o Veículo</div>
-                <div class="vehicle-selector-subtitle">Escolha qual veículo deseja visualizar</div>
-            </div>
-            <div class="vehicle-list" id="vehicleList">
-                <!-- Veículos serão inseridos aqui via JavaScript -->
-            </div>
-            <div class="vehicle-selector-footer">
-                <button class="btn-cancel" id="btnCancelSelector">Cancelar</button>
-            </div>
-        </div>
     </div>
 
     <div id="map"></div>
@@ -326,8 +239,13 @@
         let vehicleMarkers = {};
         let pathLayer = null;
         let realtimeChannel = null;
+        let currentMode = 'realtime';
 
-        const vehicleIcon = L.divIcon({ className: 'vehicle-marker', iconSize: [28, 28] });
+        const vehicleIcon = L.divIcon({ 
+            className: 'vehicle-marker', 
+            iconSize: [28, 28],
+            html: '' // Vazio para não ter quadrado branco
+        });
 
         function showLoading() {
             document.getElementById('loadingIndicator').classList.add('show');
@@ -344,8 +262,11 @@
 
         async function enableRealtimeMode() {
             showLoading();
+            currentMode = 'realtime';
+            
             document.getElementById('btnRealtime').classList.add('active');
             document.getElementById('btn24h').classList.remove('active');
+            document.getElementById('vehicleSelectorContainer').classList.remove('show');
 
             if (pathLayer) {
                 map.removeLayer(pathLayer);
@@ -417,8 +338,17 @@
             }
         }
 
-        // FUNÇÃO PARA ABRIR SELETOR DE VEÍCULOS
-        async function showVehicleSelector() {
+        async function enable24hMode() {
+            currentMode = '24h';
+            
+            document.getElementById('btn24h').classList.add('active');
+            document.getElementById('btnRealtime').classList.remove('active');
+
+            if (realtimeChannel) {
+                supabase.removeChannel(realtimeChannel);
+                realtimeChannel = null;
+            }
+
             showLoading();
 
             try {
@@ -430,24 +360,18 @@
                     return;
                 }
 
-                const vehicleList = document.getElementById('vehicleList');
-                vehicleList.innerHTML = '';
-
-                vehicles.forEach(vehicle => {
-                    const item = document.createElement('div');
-                    item.className = 'vehicle-item';
-                    item.innerHTML = `
-                        <div class="vehicle-info">
-                            <div class="vehicle-id">🚗 ${vehicle.vehicle_id}</div>
-                            <div class="vehicle-driver">${vehicle.driver_name}</div>
-                        </div>
-                        <div class="vehicle-arrow">›</div>
-                    `;
-                    item.onclick = () => loadVehicle24h(vehicle.vehicle_id);
-                    vehicleList.appendChild(item);
+                // Preencher dropdown
+                const dropdown = document.getElementById('vehicleDropdown');
+                dropdown.innerHTML = '<option value="">Selecione o veículo</option>';
+                
+                vehicles.forEach(v => {
+                    const option = document.createElement('option');
+                    option.value = v.vehicle_id;
+                    option.textContent = `${v.vehicle_id} - ${v.driver_name}`;
+                    dropdown.appendChild(option);
                 });
 
-                document.getElementById('vehicleSelectorOverlay').classList.add('show');
+                document.getElementById('vehicleSelectorContainer').classList.add('show');
                 hideLoading();
 
             } catch (err) {
@@ -457,12 +381,11 @@
             }
         }
 
-        // FUNÇÃO PARA CARREGAR TRAJETO 24H
         async function loadVehicle24h(vehicleId) {
-            document.getElementById('vehicleSelectorOverlay').classList.remove('show');
+            if (!vehicleId) return;
+
             showLoading();
 
-            // Limpar mapa
             Object.values(vehicleMarkers).forEach(m => map.removeLayer(m));
             vehicleMarkers = {};
             if (pathLayer) {
@@ -481,7 +404,7 @@
                 }
 
                 if (!trajectory || trajectory.length === 0) {
-                    alert(`Nenhum trajeto encontrado para ${vehicleId} nas últimas 24h`);
+                    alert(`Nenhum trajeto encontrado para ${vehicleId}`);
                     hideLoading();
                     return;
                 }
@@ -494,16 +417,19 @@
                     opacity: 0.8
                 }).addTo(map);
 
+                // Ícones SEM quadrado branco
                 const startIcon = L.divIcon({
                     html: '🟢',
-                    iconSize: [40, 40],
-                    iconAnchor: [20, 40]
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 32],
+                    className: 'start-marker'
                 });
 
                 const endIcon = L.divIcon({
                     html: '🔴',
-                    iconSize: [40, 40],
-                    iconAnchor: [20, 40]
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 32],
+                    className: 'end-marker'
                 });
 
                 L.marker(coords[0], { icon: startIcon })
@@ -535,16 +461,9 @@
 
         // EVENT LISTENERS
         document.getElementById('btnRealtime').addEventListener('click', enableRealtimeMode);
-        document.getElementById('btn24h').addEventListener('click', showVehicleSelector);
-        document.getElementById('btnCancelSelector').addEventListener('click', () => {
-            document.getElementById('vehicleSelectorOverlay').classList.remove('show');
-        });
-
-        // Fechar modal ao clicar fora
-        document.getElementById('vehicleSelectorOverlay').addEventListener('click', (e) => {
-            if (e.target.id === 'vehicleSelectorOverlay') {
-                document.getElementById('vehicleSelectorOverlay').classList.remove('show');
-            }
+        document.getElementById('btn24h').addEventListener('click', enable24hMode);
+        document.getElementById('vehicleDropdown').addEventListener('change', (e) => {
+            loadVehicle24h(e.target.value);
         });
 
         enableRealtimeMode();
